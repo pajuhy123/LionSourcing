@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "LionSourcing.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "LionSourcing.settings.prod_aws_eb")
 
 application = get_wsgi_application()
