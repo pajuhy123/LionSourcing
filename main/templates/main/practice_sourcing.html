@@ -1,0 +1,199 @@
+{% extends 'main/layout.html'%}
+
+{%block content %}
+      <div class='index-box'>
+       <h3>할당량 :11886 </h3><h3 style='display: inline;'>인덱스 : </h3><h3 id='index-part' style='display: inline;'>{{indexs}}</h3>
+       <input id='index_save' class='btn btn-primary btn-lg' style='display: block;' type='button' value='인덱스 저장하기' />
+      </div>
+        <div class='work-box'>  
+            <h2></h2><br/>
+
+            <div id="myProgress">
+                <div id="myBar">1 문장 째</div>
+            </div>
+            <br />
+            
+            <p id='text-before'>
+                {{sentences.0}}
+            </p><br />
+            <input type='button' value=" 이전 오디오" class='btn btn-info' onclick="beforePlay();"/>
+            <audio id="player" controls="controls" loop="loop" preload="auto" controlsList="nodownload" >
+                <source src='#' type="audio/wav" />
+            </audio>
+            <input type='button' value=" 이후 오디오" class='btn btn-info' onclick="nextPlay();"/>
+            <br />
+            
+            <button onclick="doPlay()" class='btn btn-primary'title=“”>Play</button>
+            <button onclick="doPause()" class='btn btn-primary'title=“”>Pause</button>
+            <button onclick="doStop()" class='btn btn-primary'title=“”>Stop</button>
+            <br /><br />
+             <input class='text-after' type='text' value='' /><br /><br />
+             <input id='send_fb' class='btn btn-primary btn-lg' type='button' value='서버에 제출' />
+             <input id='next_5' class='btn btn-primary btn-lg' type='button' value='다음 5개 불러오기' />
+        </div>
+
+
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script>
+    $("#send_fb").click(function(){
+    var sended_sentence = $(".text-after").val(); //보내질 문장
+    console.log(sended_sentence);
+    console.log(pointer);
+    // 파이어베이스에 문장 전달
+     $.ajax({ // .제출 버튼을 클릭하면 <새로고침> 없이 ajax로 서버와 통신하겠다.
+        type: "POST", // 데이터를 전송하는 방법을 지정
+        url: "{% url 'main:send_fb' %}", // 통신할 url을 지정
+        data: {'sended_sentence': sended_sentence, 'indexing': indexing}, // 서버로 데이터 전송시 옵션
+
+        success: function(response){ // 통신 성공시 - 
+           alert("서버와 문장을 전달했습니당");
+           $(".text-after").val('');//전송 후 텍스트 필드 비우기
+        },
+        error: function(request, status, error){ // 통신 실패시 
+           alert("서버에 문장 전송 실패;;");
+           $(".text-after").val('');
+        },
+     }); 
+    })
+    //인덱스 저장 기능 -> profile 모델의 인덱스에 저장하고 불러온다
+    $("#index_save").click(function(){
+        var sended = indexing
+        console.log(sended);
+        // 인덱스 저장하기
+        $.ajax({ // .제출 버튼을 클릭하면 <새로고침> 없이 ajax로 서버와 통신하겠다.
+            type: "POST", // 데이터를 전송하는 방법을 지정
+            url: "{% url 'main:index_save'%}", // 통신할 url을 지정
+            data: {'sended': sended,}, // 서버로 데이터 전송시 옵션
+    
+            success: function(response){ // 통신 성공시 - 
+               alert("인덱스 저장 성공");
+               console.log('슈발'+response.data)
+               document.getElementById('index-part').innerText = response.data
+            },
+            error: function(request, status, error){ // 통신 실패시 
+               alert("인덱스 저장 실패;;");
+
+            },
+         }); 
+        })
+    // 디비에서 다음 인덱스의 다섯개를 뽑아서 보여준다
+    $("#next_5").click(function(){
+        var sended = indexing
+        $.ajax({ // .다름 다섯개 버튼을 누르 
+            type: "POST", // 데이터를 전송하는 방법을 지정
+            url: "{% url 'main:next' %}", // 통신할 url을 지정
+            data: {'sended': sended}, // 서버로 데이터 전송시 옵션
+            //dataType: "json",
+            success: function(response){ // 통신 성공시 -
+               alert("다섯개 가져왔으니 다시 ㄱ ㄱ");
+               width = 20;
+               elem.style.width = width + '%'; 
+               elem.innerHTML = width/20 + '문장 째';
+               pointer = 0;
+               playlists = [];
+               sentenceList = [];
+               indexing +=1
+               //console.log(response.links2[0]);
+               //console.log(response.sentences2);
+               //var links2 = response.links2
+               //var sentences2 =response.sentences2
+               for(var i=0; i < response.links2.length;i++){
+                  playlists.push(response.links2[i]);
+               }
+               for(var i=0; i < response.sentences2.length;i++){
+                 sentenceList.push(response.sentences2[i]);
+               }
+               document.getElementById('text-before').innerText = sentenceList[0];
+               document.getElementById('player').src = playlists[0]; 
+               console.log(playlists);
+               console.log(sentenceList);
+            },
+            error: function(request, status, error){ // 통신 실패시 
+               alert("다음 다섯개 못가져옴");
+            },
+         }); 
+    })
+</script>
+
+<script type="text/javascript">
+    var elem = document.getElementById("myBar"); //진행표시를 위한1
+    var width = 20;//진행표시를 위한2
+
+    var playlists = new Array();
+    var pointer = 0
+    var indexing = '{{indexs}}'; // 유저의 인덱스 가져오기
+    console.log('ddd'+indexing);
+    
+    var playlists = []; // 링크라 들어갈 리스트
+    var sentenceList = [];// 정제해야 할 문장
+    
+    //디비에 가져온 정제 전 문장과 직접링크 리스트에 푸쉬
+    {%for sentence in sentences%}
+        sentenceList.push("{{sentence}}")
+    {%endfor%}
+    {%for link in links%}
+        playlists.push("{{link}}")
+    {%endfor%}
+    //링크와 문장들 잘 가져왔는지 로그 값 출력
+    console.log(playlists);
+    console.log(sentenceList);
+
+    document.getElementById('player').src = playlists[0]; //처음 직접 링크 웹에 연결
+    function doPlay(){
+        var obj = document.getElementById("player");
+        obj.play();
+    }
+    function doPause(){
+        var obj = document.getElementById("player");
+        obj.pause();
+    }
+    function doStop(){
+        var obj = document.getElementById("player");
+        obj.pause();
+        obj.currentTime=0;
+    }
+    function nextPlay(){
+        //진행상황 버튼 표시 deactive
+        pointer++;
+        if(pointer>playlists.length-1){
+            alert("다음 5개 버튼을 누르세용 ㅎㅎ ")
+            pointer = pointer-1;
+        }else{
+            console.log(playlists[pointer]);
+            document.getElementById('player').src = playlists[pointer]; 
+            var media = document.getElementById('player');
+            media.currentTime = 0;
+            media.play();
+            //다음 정제할 문장 보여주기
+            document.getElementById('text-before').innerText = sentenceList[pointer];
+            //진생상황 표시를 위한
+            width += 20; 
+            elem.style.width = width + '%'; 
+            elem.innerHTML = width/20  + '문장 째';
+            indexing = parseInt(indexing)+1 // for 인덱싱 기능
+
+        }
+    }
+    function beforePlay(){
+        pointer--;
+        if(pointer<0){
+            pointer = 0;
+            alert("이전 오디오가 없습니다. 인덱스가 마지막으로 저장된 음성입니다");
+        }else{
+            console.log(playlists[pointer]);
+            document.getElementById('player').src = playlists[pointer];
+            var media = document.getElementById('player');
+            media.currentTime = 0;
+            media.play();
+            //전의 정제할 문장 보여주기
+            document.getElementById('text-before').innerText = sentenceList[pointer];
+            //진생상황 표시를 위한
+            width -= 20; 
+            elem.style.width = width + '%'; 
+            elem.innerHTML = width/20 + '문장 째';
+
+            indexing = parseInt(indexing)-1 // 어디까지 했는지 를 위한 
+        }
+    }    
+</script>
+{%endblock%}
