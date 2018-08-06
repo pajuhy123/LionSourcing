@@ -1,2 +1,1 @@
-django<1.11
-python-firebase==1.2
+-r reqs/prod_aws_eb.txt
